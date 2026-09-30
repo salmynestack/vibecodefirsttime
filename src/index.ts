@@ -1,8 +1,10 @@
 import { Elysia } from "elysia";
+import { usersRoute } from "./routes/users-route";
 
 const port = Number(process.env.PORT) || 3000;
 
 const app = new Elysia()
+  .use(usersRoute)
   .get("/", () => ({ message: "Hello from ElysiaJS + Bun + Drizzle ORM!" }))
   .get("/health", () => ({ status: "ok", timestamp: new Date().toISOString() }))
   .listen(port);
