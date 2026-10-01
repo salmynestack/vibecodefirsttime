@@ -1,7 +1,7 @@
 flowchart TD
     %% === PROJECT GOALS ===
     %% Ultimate Goal: Membangun backend API autentikasi dan manajemen user berbasis Bun, ElysiaJS, dan Drizzle ORM
-    %% Current Goal: Implementasi endpoint GET current user berbasis Bearer token sesi
+    %% Current Goal: Perbaikan bug validasi panjang karakter kolom name pada registrasi user
 
     %% === START ===
     %% @project_start [start, closed, 2026-09-30, salmin]
@@ -16,11 +16,14 @@ flowchart TD
     %% @feature_login [ai-task, closed, 2026-10-01, salmin]
     feature_login("API Login & Sessions<br/><sub>Implementasi skema tabel sessions,<br/>verifikasi password via bcrypt,<br/>dan endpoint POST /api/users/login</sub>")
 
-    %% @plan_get_user [ai-task, closed, 2026-10-01, ai]
-    plan_get_user("Perencanaan Get Current User<br/><sub>Penyusunan dokumen issue.md dan<br/>pembuatan GitHub Issue #9 untuk<br/>panduan implementasi profile me</sub>")
+    %% @feature_get_user [ai-task, closed, 2026-10-01, salmin]
+    feature_get_user("API Get Current User<br/><sub>Validasi Bearer token sesi ke tabel<br/>sessions dan response data user<br/>pada rute GET /api/users/me</sub>")
 
-    %% @impl_get_user [ai-task, closed, 2026-10-01, ai]
-    impl_get_user("Implementasi Get Current User<br/><sub>Validasi Bearer token ke tabel<br/>sessions, pencarian relasi user,<br/>dan endpoint GET /api/users/me</sub>")
+    %% @plan_bug_name_length [ai-task, closed, 2026-10-01, ai]
+    plan_bug_name_length("Perencanaan Bug Validasi Nama<br/><sub>Analisis root cause string 300<br/>karakter lolos dan pembuatan<br/>GitHub Issue #11 untuk fix</sub>")
+
+    %% @fix_bug_name_length [ai-task, closed, 2026-10-01, ai]
+    fix_bug_name_length("Perbaikan Bug Panjang Nama<br/><sub>Penerapan maxLength 255 di Elysia<br/>TypeBox serta migrasi tipe kolom<br/>name menjadi varchar 255 di DB</sub>")
 
     %% @feature_logout [ai-task, opened, 2026-10-01, user]
     feature_logout("Logout & Invalidate Session<br/><sub>Penghapusan session dari DB<br/>saat user melakukan logout dan<br/>pemberian respons sukses</sub>")
@@ -32,14 +35,15 @@ flowchart TD
     project_start --> setup_stack
     setup_stack --> feature_register
     feature_register --> feature_login
-    feature_login --> plan_get_user
-    plan_get_user --> impl_get_user
-    impl_get_user --> feature_logout
+    feature_login --> feature_get_user
+    feature_get_user --> plan_bug_name_length
+    plan_bug_name_length --> fix_bug_name_length
+    fix_bug_name_length --> feature_logout
     feature_logout -.-> ultimate_goal
 
     %% === RECENT WORK HIGHLIGHT ===
     subgraph recent [RECENT]
-        impl_get_user
+        fix_bug_name_length
     end
 
     %% === STYLES ===
@@ -48,10 +52,11 @@ flowchart TD
     style setup_stack fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
     style feature_register fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
     style feature_login fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
-    style plan_get_user fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
+    style feature_get_user fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
+    style plan_bug_name_length fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
 
     %% Recent node (highlighted purple)
-    style impl_get_user fill:#2d1f4e,stroke:#c084fc,color:#e9d5ff,stroke-width:2px
+    style fix_bug_name_length fill:#2d1f4e,stroke:#c084fc,color:#e9d5ff,stroke-width:2px
 
     %% Recent subgraph (dashed border)
     style recent fill:transparent,stroke:#c084fc,color:#c084fc,stroke-width:2px,stroke-dasharray:5 5
