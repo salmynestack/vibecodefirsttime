@@ -52,3 +52,39 @@ export const loginUserService = async (payload: { name?: string; email: string; 
 
   return { data: token };
 };
+
+export const getCurrentUserService = async (token: string) => {
+  // Cari record session berdasarkan token
+  const sessionResult = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.token, token))
+    .limit(1);
+
+  const session = sessionResult[0];
+  if (!session) {
+    throw new Error("unauthorized");
+  }
+
+  // Cari user berdasarkan session.userId
+  const userResult = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, session.userId))
+    .limit(1);
+
+  const user = userResult[0];
+  if (!user) {
+    throw new Error("unauthorized");
+  }
+
+  return {
+    data: {
+      id: user.id,
+      name: user.name,
+      password: user.password,
+      created_at: user.createdAt,
+    },
+  };
+};
+

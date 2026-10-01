@@ -1,7 +1,7 @@
 flowchart TD
     %% === PROJECT GOALS ===
     %% Ultimate Goal: Membangun backend API autentikasi dan manajemen user berbasis Bun, ElysiaJS, dan Drizzle ORM
-    %% Current Goal: Implementasi autentikasi login user dan pembuatan sesi token
+    %% Current Goal: Implementasi endpoint GET current user berbasis Bearer token sesi
 
     %% === START ===
     %% @project_start [start, closed, 2026-09-30, salmin]
@@ -13,14 +13,17 @@ flowchart TD
     %% @feature_register [ai-task, closed, 2026-09-30, salmin]
     feature_register("API Registrasi User<br/><sub>Implementasi skema tabel users,<br/>hashing password dengan bcrypt,<br/>dan endpoint POST /api/users</sub>")
 
-    %% @plan_login_issue [ai-task, closed, 2026-10-01, ai]
-    plan_login_issue("Perencanaan Fitur Login<br/><sub>Penyusunan dokumen issue.md dan<br/>pembuatan GitHub Issue #6 untuk<br/>panduan implementasi login</sub>")
+    %% @feature_login [ai-task, closed, 2026-10-01, salmin]
+    feature_login("API Login & Sessions<br/><sub>Implementasi skema tabel sessions,<br/>verifikasi password via bcrypt,<br/>dan endpoint POST /api/users/login</sub>")
 
-    %% @impl_login_sessions [ai-task, closed, 2026-10-01, ai]
-    impl_login_sessions("Implementasi Login & Session<br/><sub>Tabel sessions di Drizzle schema,<br/>verifikasi password via bcrypt,<br/>dan endpoint POST /api/users/login</sub>")
+    %% @plan_get_user [ai-task, closed, 2026-10-01, ai]
+    plan_get_user("Perencanaan Get Current User<br/><sub>Penyusunan dokumen issue.md dan<br/>pembuatan GitHub Issue #9 untuk<br/>panduan implementasi profile me</sub>")
 
-    %% @auth_middleware [ai-task, opened, 2026-10-01, user]
-    auth_middleware("Middleware Auth & Guard<br/><sub>Validasi Bearer token dari header,<br/>pencocokan session aktif di DB,<br/>dan proteksi private routes</sub>")
+    %% @impl_get_user [ai-task, closed, 2026-10-01, ai]
+    impl_get_user("Implementasi Get Current User<br/><sub>Validasi Bearer token ke tabel<br/>sessions, pencarian relasi user,<br/>dan endpoint GET /api/users/me</sub>")
+
+    %% @feature_logout [ai-task, opened, 2026-10-01, user]
+    feature_logout("Logout & Invalidate Session<br/><sub>Penghapusan session dari DB<br/>saat user melakukan logout dan<br/>pemberian respons sukses</sub>")
 
     %% @ultimate_goal [end, opened, 2026-10-01, user]
     ultimate_goal("Sistem Auth Selesai<br/><sub>Sistem registrasi, login, dan<br/>manajemen session berbasis token<br/>siap digunakan untuk endpoint aman</sub>")
@@ -28,14 +31,15 @@ flowchart TD
     %% === CONNECTIONS ===
     project_start --> setup_stack
     setup_stack --> feature_register
-    feature_register --> plan_login_issue
-    plan_login_issue --> impl_login_sessions
-    impl_login_sessions --> auth_middleware
-    auth_middleware -.-> ultimate_goal
+    feature_register --> feature_login
+    feature_login --> plan_get_user
+    plan_get_user --> impl_get_user
+    impl_get_user --> feature_logout
+    feature_logout -.-> ultimate_goal
 
     %% === RECENT WORK HIGHLIGHT ===
     subgraph recent [RECENT]
-        impl_login_sessions
+        impl_get_user
     end
 
     %% === STYLES ===
@@ -43,14 +47,15 @@ flowchart TD
     style project_start fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
     style setup_stack fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
     style feature_register fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
-    style plan_login_issue fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
+    style feature_login fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
+    style plan_get_user fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
 
     %% Recent node (highlighted purple)
-    style impl_login_sessions fill:#2d1f4e,stroke:#c084fc,color:#e9d5ff,stroke-width:2px
+    style impl_get_user fill:#2d1f4e,stroke:#c084fc,color:#e9d5ff,stroke-width:2px
 
     %% Recent subgraph (dashed border)
     style recent fill:transparent,stroke:#c084fc,color:#c084fc,stroke-width:2px,stroke-dasharray:5 5
 
     %% Open tasks (soft green)
-    style auth_middleware fill:#1a1a2e,stroke:#4ade80,color:#86efac,stroke-width:1px
+    style feature_logout fill:#1a1a2e,stroke:#4ade80,color:#86efac,stroke-width:1px
     style ultimate_goal fill:#1a1a2e,stroke:#4ade80,color:#86efac,stroke-width:1px
