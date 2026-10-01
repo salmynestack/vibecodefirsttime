@@ -15,6 +15,13 @@
       "when": 1790776381650,
       "tag": "0001_amused_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790856511855,
+      "tag": "0002_misty_prodigy",
+      "breakpoints": true
     }
   ]
 }
