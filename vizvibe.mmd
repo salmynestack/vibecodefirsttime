@@ -1,7 +1,7 @@
 flowchart TD
     %% === PROJECT GOALS ===
     %% Ultimate Goal: Membangun backend API autentikasi dan manajemen user berbasis Bun, ElysiaJS, dan Drizzle ORM
-    %% Current Goal: Perbaikan bug validasi panjang karakter kolom name pada registrasi user
+    %% Current Goal: Perencanaan dan implementasi unit test komprehensif menggunakan Bun test
 
     %% === START ===
     %% @project_start [start, closed, 2026-09-30, salmin]
@@ -19,31 +19,31 @@ flowchart TD
     %% @feature_get_user [ai-task, closed, 2026-10-01, salmin]
     feature_get_user("API Get Current User<br/><sub>Validasi Bearer token sesi ke tabel<br/>sessions dan response data user<br/>pada rute GET /api/users/me</sub>")
 
-    %% @plan_bug_name_length [ai-task, closed, 2026-10-01, ai]
-    plan_bug_name_length("Perencanaan Bug Validasi Nama<br/><sub>Analisis root cause string 300<br/>karakter lolos dan pembuatan<br/>GitHub Issue #11 untuk fix</sub>")
-
-    %% @fix_bug_name_length [ai-task, closed, 2026-10-01, ai]
+    %% @fix_bug_name_length [ai-task, closed, 2026-10-01, salmin]
     fix_bug_name_length("Perbaikan Bug Panjang Nama<br/><sub>Penerapan maxLength 255 di Elysia<br/>TypeBox serta migrasi tipe kolom<br/>name menjadi varchar 255 di DB</sub>")
 
-    %% @feature_logout [ai-task, opened, 2026-10-01, user]
-    feature_logout("Logout & Invalidate Session<br/><sub>Penghapusan session dari DB<br/>saat user melakukan logout dan<br/>pemberian respons sukses</sub>")
+    %% @plan_unit_tests [ai-task, closed, 2026-10-01, ai]
+    plan_unit_tests("Perencanaan Unit Test<br/><sub>Penyusunan katalog skenario uji<br/>seluruh API di GitHub Issue #13<br/>dan isolasi DB via bun test</sub>")
+
+    %% @impl_unit_tests [ai-task, closed, 2026-10-01, ai]
+    impl_unit_tests("Implementasi Unit Tests<br/><sub>Penulisan berkas tes di tests/,<br/>hook pembersihan data DB, dan<br/>eksekusi validasi bun test</sub>")
 
     %% @ultimate_goal [end, opened, 2026-10-01, user]
-    ultimate_goal("Sistem Auth Selesai<br/><sub>Sistem registrasi, login, dan<br/>manajemen session berbasis token<br/>siap digunakan untuk endpoint aman</sub>")
+    ultimate_goal("Sistem Auth Selesai & Teruji<br/><sub>Sistem auth siap produksi dengan<br/>cakupan pengujian unit otomatis<br/>yang lengkap dan terverifikasi</sub>")
 
     %% === CONNECTIONS ===
     project_start --> setup_stack
     setup_stack --> feature_register
     feature_register --> feature_login
     feature_login --> feature_get_user
-    feature_get_user --> plan_bug_name_length
-    plan_bug_name_length --> fix_bug_name_length
-    fix_bug_name_length --> feature_logout
-    feature_logout -.-> ultimate_goal
+    feature_get_user --> fix_bug_name_length
+    fix_bug_name_length --> plan_unit_tests
+    plan_unit_tests --> impl_unit_tests
+    impl_unit_tests -.-> ultimate_goal
 
     %% === RECENT WORK HIGHLIGHT ===
     subgraph recent [RECENT]
-        fix_bug_name_length
+        impl_unit_tests
     end
 
     %% === STYLES ===
@@ -53,14 +53,14 @@ flowchart TD
     style feature_register fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
     style feature_login fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
     style feature_get_user fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
-    style plan_bug_name_length fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
+    style fix_bug_name_length fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
+    style plan_unit_tests fill:#1a1a2e,stroke:#a78bfa,color:#c4b5fd,stroke-width:1px
 
     %% Recent node (highlighted purple)
-    style fix_bug_name_length fill:#2d1f4e,stroke:#c084fc,color:#e9d5ff,stroke-width:2px
+    style impl_unit_tests fill:#2d1f4e,stroke:#c084fc,color:#e9d5ff,stroke-width:2px
 
     %% Recent subgraph (dashed border)
     style recent fill:transparent,stroke:#c084fc,color:#c084fc,stroke-width:2px,stroke-dasharray:5 5
 
     %% Open tasks (soft green)
-    style feature_logout fill:#1a1a2e,stroke:#4ade80,color:#86efac,stroke-width:1px
     style ultimate_goal fill:#1a1a2e,stroke:#4ade80,color:#86efac,stroke-width:1px
