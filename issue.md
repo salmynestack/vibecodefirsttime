@@ -1,233 +1,171 @@
-# Issue: Implementasi API Get Current User Berdasarkan Token Sesi (Authorization: Bearer <token>)
+# Bug: Panjang Kolom 'name' Tidak Dibatasi (Menerima > 255 Karakter) pada Registrasi User
 
-## 1. Deskripsi Singkat
-Fitur ini bertujuan untuk mengambil data profil pengguna (*current user*) yang sedang login melalui endpoint `GET /api/users/me`. Pengguna mengirimkan token autentikasi melalui header HTTP `Authorization: Bearer <token>`. Sistem akan memvalidasi token tersebut ke dalam tabel `sessions` dan mengembalikan data pengguna dari tabel `users`.
+## 1. Deskripsi Bug
+Pada saat melakukan pendaftaran pengguna baru melalui endpoint `POST /api/users`, sistem saat ini mengizinkan nilai `name` dengan panjang berlebih (misalnya 300 karakter atau lebih) tanpa ada penolakan dari sistem validasi API maupun penolakan dari skema database.
 
-Dokumen ini disusun sebagai panduan teknis implementasi langkah demi langkah (*step-by-step*) yang dapat langsung dieksekusi oleh **Junior Programmer** atau **AI Model**.
+Sesuai spesifikasi awal rancangan aplikasi, kolom `name` seharusnya memiliki batasan maksimal **255 karakter** (`VARCHAR(255)`).
 
----
-
-## 2. Struktur Proyek & Konvensi File
-
-Ikuti struktur folder dan arsitektur yang sudah ada:
-```text
-src/
-├── db/
-│   ├── index.ts          # Koneksi Drizzle ORM
-│   └── schema.ts         # Definisi skema tabel database (users & sessions)
-├── routes/
-│   └── users-route.ts    # Handler routing ElysiaJS
-├── services/
-│   └── users-service.ts  # Business logic & interaksi database
-└── index.ts              # Entry point aplikasi
-```
-
-**Aturan Penamaan & Konvensi:**
-- **Routes**: Terletak di folder `src/routes/` dengan format penamaan `*-route.ts` (contoh: `users-route.ts`).
-- **Services**: Terletak di folder `src/services/` dengan format penamaan `*-service.ts` (contoh: `users-service.ts`).
-- **Header Parsing**: Mengambil token dari header `Authorization: Bearer <token>` (case-insensitive).
+Dokumen ini disusun sebagai panduan teknis langkah demi langkah (*step-by-step*) bagi **Junior Programmer** atau **AI Model** untuk mereproduksi dan memperbaiki bug ini.
 
 ---
 
-## 3. Spesifikasi Database
+## 2. Analisis Akar Masalah (Root Cause Analysis)
 
-### Status Skema Tabel
-Tabel `users` dan `sessions` **sudah didefinisikan** pada implementasi sebelumnya di [src/db/schema.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/db/schema.ts).
+Bug ini terjadi pada 2 lapisan (*layer*):
 
-Pastikan struktur tabel `sessions` tetap seperti berikut:
-| Kolom | Tipe Data Drizzle | PostgreSQL Type | Keterangan |
-| :--- | :--- | :--- | :--- |
-| `id` | `serial("id")` | `SERIAL PRIMARY KEY` | Auto-increment ID |
-| `token` | `varchar("token", { length: 255 })` | `VARCHAR(255) NOT NULL` | UUID string token session |
-| `user_id` | `integer("user_id")` | `INTEGER NOT NULL REFERENCES users(id)` | Foreign Key ke tabel `users(id)` |
-| `password` | `varchar("password", { length: 255 })` | `VARCHAR(255) NOT NULL` | Hash password user (bcrypt) |
-| `created_at` | `timestamp("created_at")` | `TIMESTAMP DEFAULT CURRENT_TIMESTAMP` | Waktu session dibuat (`defaultNow().notNull()`) |
-
-*(Jika tabel `sessions` belum ada di database lokal Anda, jalankan `bun run db:generate && bun run db:migrate`)*.
-
----
-
-## 4. Spesifikasi API Endpoint
-
-### Endpoint Detail
-- **Method**: `GET`
-- **URL**: `/api/users/me`
-- **Headers**:
-  ```http
-  Authorization: Bearer <token>
-  ```
-  *(di mana `<token>` adalah token UUID aktif yang diperoleh saat login dan tersimpan pada tabel `sessions`)*
-
----
-
-### Response Body
-
-#### 1. Berhasil (Status Code: `200 OK`)
-Jika token ditemukan di tabel `sessions` dan terhubung ke user yang valid:
-```json
-{
-  "data": {
-    "id": 1,
-    "name": "denis",
-    "password": "$2a$10$abcdefghijklmnopqrstuvwxyz1234567890",
-    "created_at": "2026-10-01T12:00:00.000Z"
-  }
-}
-```
-
-#### 2. Gagal / Unauthorized (Status Code: `401 Unauthorized`)
-Jika header `Authorization` tidak dikirim, format bukan `Bearer <token>`, atau token tidak terdaftar / tidak valid:
-```json
-{
-  "data": "unauthorized"
-}
-```
-
----
-
-## 5. Tahapan Langkah Demi Langkah (Step-by-Step Implementation)
-
-### Langkah 1: Verifikasi Skema Database
-1. Buka [src/db/schema.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/db/schema.ts).
-2. Pastikan tabel `users` dan `sessions` beserta type inference-nya sudah ter-export:
+1. **Lapisan Validasi API (`src/routes/users-route.ts`)**:
+   Skema body Elysia saat ini hanya menggunakan `t.String()`:
    ```typescript
-   export type User = typeof users.$inferSelect;
-   export type Session = typeof sessions.$inferSelect;
-   ```
-
-### Langkah 2: Implementasikan Service `getCurrentUserService`
-1. Buka [src/services/users-service.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/services/users-service.ts).
-2. Tambahkan dan export fungsi `getCurrentUserService(token: string)`:
-   - **Query Session**: Cari record di tabel `sessions` yang memiliki `token` sama persis:
-     ```typescript
-     const sessionResult = await db
-       .select()
-       .from(sessions)
-       .where(eq(sessions.token, token))
-       .limit(1);
-
-     const session = sessionResult[0];
-     if (!session) {
-       throw new Error("unauthorized");
-     }
-     ```
-   - **Query User**: Cari record di tabel `users` berdasarkan `session.userId`:
-     ```typescript
-     const userResult = await db
-       .select()
-       .from(users)
-       .where(eq(users.id, session.userId))
-       .limit(1);
-
-     const user = userResult[0];
-     if (!user) {
-       throw new Error("unauthorized");
-     }
-     ```
-   - **Format Return**: Kembalikan data user sesuai format yang diminta:
-     ```typescript
-     return {
-       data: {
-         id: user.id,
-         name: user.name,
-         password: user.password,
-         created_at: user.createdAt,
-       },
-     };
-     ```
-
-### Langkah 3: Tambahkan Route Handler di `src/routes/users-route.ts`
-1. Buka [src/routes/users-route.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/routes/users-route.ts).
-2. Import fungsi `getCurrentUserService` dari `../services/users-service`.
-3. Tambahkan endpoint `GET /api/users/me`:
-   ```typescript
-   .get("/api/users/me", async ({ headers, set }) => {
-     try {
-       const authHeader = headers["authorization"] || headers["Authorization"];
-       if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
-         set.status = 401;
-         return { data: "unauthorized" };
-       }
-
-       const token = authHeader.substring(7).trim();
-       if (!token) {
-         set.status = 401;
-         return { data: "unauthorized" };
-       }
-
-       const response = await getCurrentUserService(token);
-       set.status = 200;
-       return response;
-     } catch (error: any) {
-       set.status = 401;
-       return { data: "unauthorized" };
-     }
+   body: t.Object({
+     name: t.String(), // Tidak ada batasan minLength maupun maxLength
+     email: t.String(),
+     password: t.String(),
    })
    ```
+   Karena tidak ada parameter `maxLength: 255`, Elysia menganggap string 300 karakter sebagai data yang valid dan meloloskannya ke *service layer*.
 
-### Langkah 4: Pengujian & Validasi (Testing)
-Jalankan dev server dengan Bun:
+2. **Lapisan Database (`src/db/schema.ts`)**:
+   Kolom `name` pada tabel `users` saat ini didefinisikan menggunakan tipe `text`:
+   ```typescript
+   name: text("name").notNull()
+   ```
+   Di PostgreSQL, tipe data `text` bersifat dinamis dan dapat menampung teks tanpa batasan 255 karakter (hingga 1 GB), sehingga database juga tidak menolak string 300 karakter tersebut.
+
+---
+
+## 3. Perilaku yang Diharapkan (Expected Behavior)
+- Jika client mengirimkan request `POST /api/users` dengan panjang `name` **lebih dari 255 karakter**, server harus langsung menolak request sebelum dieksekusi ke database dengan:
+  - **HTTP Status Code**: `422 Unprocessable Entity` (bawaan Elysia TypeBox validator)
+- Jika client mengirimkan `name` string kosong (`""`), server harus menolak dengan HTTP Status `422`.
+- Jika panjang `name` antara **1 sampai 255 karakter**, request diproses secara normal.
+- Tabel database `users` harus secara konsisten menggunakan tipe kolom `varchar(255)`.
+
+---
+
+## 4. Panduan Perbaikan Langkah demi Langkah (Step-by-Step Fix)
+
+### Langkah 1: Tambahkan Validasi Panjang Karakter di Elysia Route
+1. Buka file [src/routes/users-route.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/routes/users-route.ts).
+2. Temukan skema validasi `body` pada endpoint `POST /api/users`.
+3. Tambahkan aturan `{ minLength: 1, maxLength: 255 }` pada properti `name`:
+
+```typescript
+// SEBELUM:
+body: t.Object({
+  name: t.String(),
+  email: t.String(),
+  password: t.String(),
+})
+
+// SESUDAH:
+body: t.Object({
+  name: t.String({ minLength: 1, maxLength: 255 }),
+  email: t.String({ format: "email", maxLength: 255 }),
+  password: t.String({ minLength: 1 }),
+})
+```
+
+*(Opsional: Terapkan juga validasi `maxLength: 255` pada field `name` di rute `POST /api/users/login` jika field tersebut disertakan)*.
+
+---
+
+### Langkah 2: Perbarui Definisi Skema Database di Drizzle ORM
+1. Buka file [src/db/schema.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/db/schema.ts).
+2. Ubah kolom `name` pada tabel `users` dari `text("name")` menjadi `varchar("name", { length: 255 })`:
+
+```typescript
+// Pastikan varchar sudah di-import dari "drizzle-orm/pg-core"
+import { integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(), // <- Ubah baris ini
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
+
+---
+
+### Langkah 3: Generate dan Jalankan Migrasi Database
+Buka terminal di root direktori proyek `vibecode`, lalu jalankan:
+```bash
+bun run db:generate
+bun run db:migrate
+```
+*Pastikan file migrasi baru (misal: `0003_xxx.sql`) terbuat di folder `drizzle/` dengan isi `ALTER TABLE "users" ALTER COLUMN "name" SET DATA TYPE varchar(255);`.*
+
+---
+
+### Langkah 4: Pengujian & Validasi Perbaikan (Testing)
+
+Jalankan server aplikasi:
 ```bash
 bun run dev
 ```
 
-Lakukan pengetesan dengan skenario berikut:
+Lakukan pengetesan dengan 3 skenario berikut menggunakan `curl` atau REST Client:
 
-#### Skenario 1: Akses Tanpa Header Authorization (Harus Gagal)
+#### Skenario A: Uji String 300 Karakter (Harus Ditolak)
+Kirimkan request dengan nama panjang 300 karakter:
 ```bash
-curl -X GET http://localhost:3000/api/users/me
+curl -i -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "email": "denis_panjang@localhost",
+    "password": "jagoo"
+  }'
 ```
-**Expected Output (HTTP 401):**
-```json
-{
-  "data": "unauthorized"
-}
-```
-
-#### Skenario 2: Akses dengan Token Tidak Valid (Harus Gagal)
-```bash
-curl -X GET http://localhost:3000/api/users/me \
-  -H "Authorization: Bearer token-ngawur-12345"
-```
-**Expected Output (HTTP 401):**
-```json
-{
-  "data": "unauthorized"
-}
-```
-
-#### Skenario 3: Login dan Akses dengan Token Valid (Harus Sukses)
-1. Lakukan login terlebih dahulu:
-   ```bash
-   curl -X POST http://localhost:3000/api/users/login \
-     -H "Content-Type: application/json" \
-     -d '{"email": "denis@localhost", "password": "jagoo"}'
-   ```
-   *(Salin nilai token UUID dari respons `{"data": "<token-uuid>"}`)*
-
-2. Panggil endpoint get current user menggunakan token tersebut:
-   ```bash
-   curl -X GET http://localhost:3000/api/users/me \
-     -H "Authorization: Bearer <token-uuid>"
-   ```
-**Expected Output (HTTP 200):**
-```json
-{
-  "data": {
-    "id": 1,
-    "name": "denis",
-    "password": "$2a$10$...",
-    "created_at": "2026-10-01T..."
-  }
-}
-```
+**Hasil yang Diharapkan:**
+- **HTTP Status Code**: `422 Unprocessable Entity`
+- Request langsung ditolak di layer routing Elysia tanpa query database.
 
 ---
 
-## 6. Definition of Done (Checklist Kriteria Selesai)
-- [ ] Fungsi `getCurrentUserService(token)` dibuat di `src/services/users-service.ts`.
-- [ ] Token dicocokkan ke tabel `sessions` dan dihubungkan ke record di tabel `users`.
-- [ ] Endpoint `GET /api/users/me` terdaftar di `src/routes/users-route.ts`.
-- [ ] Pengecekan header `Authorization: Bearer <token>` berfungsi dengan baik.
-- [ ] Request tanpa token atau token invalid merespons dengan HTTP Status `401` dan body `{ "data": "unauthorized" }`.
-- [ ] Request dengan token valid merespons dengan HTTP Status `200` dan body berisi objek user `{ "data": { "id", "name", "password", "created_at" } }`.
+#### Skenario B: Uji String Kosong (Harus Ditolak)
+Kirimkan request dengan nama kosong:
+```bash
+curl -i -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "",
+    "email": "denis_kosong@localhost",
+    "password": "jagoo"
+  }'
+```
+**Hasil yang Diharapkan:**
+- **HTTP Status Code**: `422 Unprocessable Entity`
+
+---
+
+#### Skenario C: Uji String Valid <= 255 Karakter (Harus Diterima)
+Kirimkan request dengan nama valid (misal: "denis"):
+```bash
+curl -i -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "denis",
+    "email": "denis_valid@localhost",
+    "password": "jagoo"
+  }'
+```
+**Hasil yang Diharapkan:**
+- **HTTP Status Code**: `201 Created`
+- **Response Body**:
+  ```json
+  {
+    "data": "OK"
+  }
+  ```
+
+---
+
+## 5. Definition of Done (Checklist Kriteria Selesai)
+- [ ] Validasi `name: t.String({ minLength: 1, maxLength: 255 })` ditambahkan pada `POST /api/users` di [src/routes/users-route.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/routes/users-route.ts).
+- [ ] Kolom `name` di [src/db/schema.ts](file:///c:/Users/SALMIN%20BISYIR/vibecode/src/db/schema.ts) diubah menjadi `varchar("name", { length: 255 }).notNull()`.
+- [ ] File migrasi database berhasil digenerate via `bun run db:generate`.
+- [ ] Request dengan nama 300 karakter menghasilkan status `422 Unprocessable Entity`.
+- [ ] Request dengan nama kosong `""` menghasilkan status `422 Unprocessable Entity`.
+- [ ] Request dengan nama valid (1-255 karakter) tetap berhasil diproses.
