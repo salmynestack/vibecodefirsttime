@@ -1,0 +1,44 @@
+buatkan issue.md yang berisi perencanaan untuk nanti di implementasikan oleh junior programmer atau Ai model yang lebih murah
+
+isi dari planningnya adalah sebagai berikut:
+
+buat tabel sessions:
+id integer auto increment
+token varchar 255 not null(isinya UUID untuk token user yang login)
+user_id integer(FK ke tabel users)
+password varchar 255 not null (password merupakan hash dari bcrypt)
+created_at timestamp default current_timestamp
+
+buatkan API untuk registrasi login user
+
+
+endpoint : POST/api/users/login
+
+request body :
+{
+    "name": "denis",
+    "email": "denis@localhost",
+    "password": "jagoo"
+}
+
+response body  (success) :
+
+{
+    "data" : "token"
+}
+
+response body (error) :
+
+{
+    "error" : "email atau password salah"
+}
+
+struktur folder di dalam src
+-routes : ini berisi routing elysia js
+-services : ini berisi logic bisnis aplikasi
+
+struktur file
+- routes : menggunakan format misal users-route.ts
+- services : menggunakan format misal users-service.
+
+jelaskan tahapan-tahapan yang harus dilakukan untuk mengimplementasikan fitur ini, anggap nanti yang mengiplementasikan adalah junior programmer atau model Ai yang lebih murah
